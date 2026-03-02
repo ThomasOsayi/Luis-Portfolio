@@ -20,7 +20,7 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-[900] px-11 py-7 flex justify-between items-center bg-gradient-to-b from-bg/85 to-transparent">
       <Link
-        href="/work"
+        href="/"
         className="font-serif text-sm font-semibold tracking-[1.5px] uppercase text-tx"
       >
         Luis Rosa

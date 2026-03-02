@@ -1,6 +1,28 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════
+   TAILWIND V4 THEME
+   ══════════════════════════════════════ */
+@theme {
+  --color-bg: oklch(0.07 0 0);
+  --color-bg-elevated: oklch(0.1 0 0);
+  --color-bg-card: oklch(0.13 0 0);
+
+  --color-tx: oklch(0.93 0.01 80);
+  --color-tx-dim: oklch(0.93 0.01 80 / 0.50);
+  --color-tx-ghost: oklch(0.93 0.01 80 / 0.22);
+  --color-tx-mute: oklch(0.93 0.01 80 / 0.10);
+
+  --color-gold: oklch(0.73 0.1 75);
+  --color-gold-dim: oklch(0.73 0.1 75 / 0.10);
+
+  --font-sans: "Chivo", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ══════════════════════════════════════
    BASE RESETS
    ══════════════════════════════════════ */
 html {
@@ -15,13 +37,12 @@ body {
   overflow-x: hidden;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: #0a0a0a; }
 ::-webkit-scrollbar-thumb { background: #c4a265; }
 
 /* ══════════════════════════════════════
-   FILM GRAIN OVERLAY (applied via component)
+   FILM GRAIN OVERLAY
    ══════════════════════════════════════ */
 .film-grain {
   position: fixed;
@@ -39,11 +60,4 @@ body {
   40% { transform: translate(6%, 4%); }
   60% { transform: translate(-2%, 6%); }
   80% { transform: translate(3%, -3%); }
-}
-
-/* ══════════════════════════════════════
-   UTILITY CLASSES
-   ══════════════════════════════════════ */
-.text-shadow-lg {
-  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
 }
