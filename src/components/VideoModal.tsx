@@ -1,8 +1,161 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 
+export function VideoModal() {
+  const [open, setOpen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+
+  useEffect(() => {
+    function handleOpen(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        setVideoUrl(detail);
+        setOpen(true);
+      }
+    }
+    window.addEventListener("open-video", handleOpen);
+    return () => window.removeEventListener("open-video", handleOpen);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    if (open) window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open]);
+
+  if (!open || !videoUrl) return null;
+
+  // Detect video type
+  const embedUrl = getEmbedUrl(videoUrl);
+  const isDirect = isDirectVideo(videoUrl);
+
+  return (
+    <div
+      onClick={() => setOpen(false)}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 6000,
+        background: "rgba(10,10,10,0.95)",
+        backdropFilter: "blur(20px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: "vm-fade-in 0.3s ease",
+      }}
+    >
+      <style>{`
+        @keyframes vm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes vm-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
+
+      {/* Close button */}
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          border: "1px solid rgba(245,240,235,0.15)",
+          background: "rgba(0,0,0,0.4)",
+          color: "rgba(245,240,235,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          fontSize: 18,
+          zIndex: 10,
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "#F5F0EB";
+          e.currentTarget.style.borderColor = "rgba(245,240,235,0.3)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = "rgba(245,240,235,0.6)";
+          e.currentTarget.style.borderColor = "rgba(245,240,235,0.15)";
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Video container */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "90vw",
+          maxWidth: 1100,
+          aspectRatio: "16/9",
+          borderRadius: 12,
+          overflow: "hidden",
+          animation: "vm-scale-in 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        {isDirect ? (
+          /* Direct video file (Firebase Storage, mp4, etc.) */
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              background: "#000",
+              borderRadius: 12,
+            }}
+          />
+        ) : embedUrl ? (
+          /* YouTube / Vimeo embed */
+          <iframe
+            src={embedUrl}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+              borderRadius: 12,
+            }}
+          />
+        ) : (
+          /* Fallback — try as direct video */
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              background: "#000",
+              borderRadius: 12,
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── helpers ── */
 function getEmbedUrl(url: string): string | null {
   // YouTube
   const ytPatterns = [
@@ -11,106 +164,25 @@ function getEmbedUrl(url: string): string | null {
     /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
     /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
   ];
-  for (const pattern of ytPatterns) {
-    const match = url.match(pattern);
-    if (match)
-      return `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0`;
+  for (const p of ytPatterns) {
+    const m = url.match(p);
+    if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0`;
   }
 
   // Vimeo
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch)
+  if (vimeoMatch) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+  }
 
   return null;
 }
 
-export function VideoModal() {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
-  const close = useCallback(() => setVideoUrl(null), []);
-
-  // Listen for custom event to open video modal
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const url = (e as CustomEvent).detail;
-      if (url) setVideoUrl(url);
-    };
-    window.addEventListener("open-video", handler);
-    return () => window.removeEventListener("open-video", handler);
-  }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    if (videoUrl) {
-      window.addEventListener("keydown", handler);
-    }
-    return () => window.removeEventListener("keydown", handler);
-  }, [videoUrl, close]);
-
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = videoUrl ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [videoUrl]);
-
-  const embedUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
-
-  return (
-    <AnimatePresence>
-      {videoUrl && embedUrl && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[6000] bg-bg/95 backdrop-blur-2xl flex items-center justify-center"
-          onClick={close}
-        >
-          {/* Close button */}
-          <button
-            onClick={close}
-            className="absolute top-7 right-7 z-10 w-10 h-10 rounded-full border border-tx-mute flex items-center justify-center text-tx-dim hover:text-tx hover:border-tx-ghost transition-colors"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-
-          {/* Video container */}
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="w-[90vw] max-w-[1100px] aspect-video"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <iframe
-              src={embedUrl}
-              className="w-full h-full rounded-lg"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              frameBorder="0"
-            />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+function isDirectVideo(url: string): boolean {
+  if (!url) return false;
+  // Firebase Storage URLs
+  if (url.includes("firebasestorage.googleapis.com")) return true;
+  // Direct file extensions
+  if (/\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url)) return true;
+  return false;
 }

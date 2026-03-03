@@ -18,7 +18,6 @@ const categories = [
   { value: "music-video", label: "Music Video" },
   { value: "film", label: "Short Film" },
   { value: "documentary", label: "Documentary" },
-  { value: "photography", label: "Photography" },
 ];
 
 /* ───────── icons ───────── */
@@ -61,6 +60,43 @@ function StarIcon() {
     </svg>
   );
 }
+function LinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+function VideoUploadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="23 7 16 12 23 17 23 7" />
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+    </svg>
+  );
+}
+function FilmIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+      <line x1="7" y1="2" x2="7" y2="22" />
+      <line x1="17" y1="2" x2="17" y2="22" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <line x1="2" y1="7" x2="7" y2="7" />
+      <line x1="2" y1="17" x2="7" y2="17" />
+      <line x1="17" y1="7" x2="22" y2="7" />
+      <line x1="17" y1="17" x2="22" y2="17" />
+    </svg>
+  );
+}
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
 
 /* ═══════════════════════════════════════
    ADD / EDIT PROJECT — SPLIT VIEW
@@ -77,6 +113,12 @@ export default function NewProject() {
   const [previewMode, setPreviewMode] = useState<"card" | "detail">("card");
 
   const [autoThumbnail, setAutoThumbnail] = useState("");
+
+  // Video upload state
+  const [videoSource, setVideoSource] = useState<"url" | "upload">("url");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -113,12 +155,10 @@ export default function NewProject() {
     setForm((p) => ({ ...p, videoUrl: url }));
     const ytId = extractYouTubeId(url);
     if (ytId) {
-      // Try maxresdefault first, with hqdefault as fallback
       const thumbUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
       const fallbackUrl = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
       const img = new Image();
       img.onload = () => {
-        // maxresdefault returns a 120x90 grey placeholder if unavailable
         if (img.naturalWidth > 200) {
           setAutoThumbnail(thumbUrl);
           if (!imagePreview && !form.imageUrl) {
@@ -141,6 +181,37 @@ export default function NewProject() {
     } else {
       setAutoThumbnail("");
     }
+  }
+
+  // Handle video file selection
+  function handleVideoFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Validate file type
+    if (!file.type.startsWith("video/")) {
+      alert("Please select a video file (MP4, MOV, WebM, etc.)");
+      return;
+    }
+    // Warn if file is very large
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > 500) {
+      alert("File is over 500MB. Consider compressing it first for faster upload.");
+      return;
+    }
+    setVideoFile(file);
+    setForm((p) => ({ ...p, hasVideo: true }));
+  }
+
+  // Detect if a videoUrl is a direct file (not YouTube/Vimeo)
+  function isDirectVideoUrl(url: string): boolean {
+    if (!url) return false;
+    const ytId = extractYouTubeId(url);
+    if (ytId) return false;
+    if (url.includes("vimeo.com")) return false;
+    // Firebase Storage URLs or direct file URLs
+    if (url.includes("firebasestorage.googleapis.com")) return true;
+    if (/\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url)) return true;
+    return false;
   }
 
   // Load existing project when editing
@@ -166,6 +237,11 @@ export default function NewProject() {
         });
         if (data.imageUrl) setImagePreview(data.imageUrl);
 
+        // Detect if existing video is uploaded vs URL
+        if (data.videoUrl && isDirectVideoUrl(data.videoUrl)) {
+          setVideoSource("upload");
+        }
+
         // Auto-detect YouTube thumbnail if project has a video URL
         const ytId = (() => {
           const url = data.videoUrl || "";
@@ -182,7 +258,9 @@ export default function NewProject() {
           return null;
         })();
         if (ytId) {
-          setAutoThumbnail(`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`);
+          setAutoThumbnail(
+            `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
+          );
         }
       }
       setLoadingEdit(false);
@@ -196,7 +274,6 @@ export default function NewProject() {
       ...prev,
       category: value,
       categoryLabel: cat?.label || value,
-      hasVideo: value !== "photography" ? prev.hasVideo : false,
     }));
   }
 
@@ -205,7 +282,7 @@ export default function NewProject() {
     if (!file) return;
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
-    setAutoThumbnail(""); // Manual upload takes priority
+    setAutoThumbnail("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -215,6 +292,7 @@ export default function NewProject() {
 
     try {
       let imageUrl = form.imageUrl;
+      let videoUrl = form.videoUrl;
 
       // Upload image if new file selected
       if (imageFile) {
@@ -224,6 +302,19 @@ export default function NewProject() {
         imageUrl = await getDownloadURL(storageRef);
       }
 
+      // Upload video if new file selected
+      if (videoFile) {
+        setVideoUploading(true);
+        setVideoUploadProgress("Uploading video…");
+        const ext = videoFile.name.split(".").pop() || "mp4";
+        const fileName = `video-${Date.now()}.${ext}`;
+        const storageRef = ref(storage, `projects/videos/${fileName}`);
+        await uploadBytes(storageRef, videoFile);
+        videoUrl = await getDownloadURL(storageRef);
+        setVideoUploading(false);
+        setVideoUploadProgress("");
+      }
+
       const projectData = {
         title: form.title,
         category: form.category,
@@ -231,7 +322,7 @@ export default function NewProject() {
         subtitle: form.subtitle,
         description: form.description,
         role: form.role,
-        videoUrl: form.videoUrl,
+        videoUrl,
         imageUrl,
         gradient: form.gradient,
         hasVideo: form.hasVideo,
@@ -253,6 +344,8 @@ export default function NewProject() {
     } catch (err) {
       console.error(err);
       alert("Error saving project");
+      setVideoUploading(false);
+      setVideoUploadProgress("");
     } finally {
       setSaving(false);
     }
@@ -388,18 +481,120 @@ export default function NewProject() {
             />
           </div>
 
-          {/* Video URL */}
+          {/* ─── VIDEO SECTION ─── */}
           <div>
-            <label className="text-[10px] tracking-[2px] uppercase text-tx-ghost block mb-1.5">
-              Video URL (YouTube or Vimeo)
+            <label className="text-[10px] tracking-[2px] uppercase text-tx-ghost block mb-2">
+              Video
             </label>
-            <input
-              type="url"
-              value={form.videoUrl}
-              onChange={(e) => handleVideoUrlChange(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
-              className="w-full bg-[#0e0e0e] border border-tx-mute rounded-lg px-3.5 py-2.5 text-sm text-tx outline-none focus:border-gold transition-colors"
-            />
+
+            {/* Source toggle */}
+            <div className="flex gap-0.5 bg-[#0e0e0e] rounded-lg p-0.5 mb-3 w-fit border border-tx-mute">
+              <button
+                type="button"
+                onClick={() => setVideoSource("url")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-[11px] rounded-md transition-all ${
+                  videoSource === "url"
+                    ? "bg-bg-elevated text-tx border border-tx-mute"
+                    : "text-tx-ghost hover:text-tx-dim border border-transparent"
+                }`}
+              >
+                <LinkIcon /> Paste URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setVideoSource("upload")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-[11px] rounded-md transition-all ${
+                  videoSource === "upload"
+                    ? "bg-bg-elevated text-tx border border-tx-mute"
+                    : "text-tx-ghost hover:text-tx-dim border border-transparent"
+                }`}
+              >
+                <VideoUploadIcon /> Upload File
+              </button>
+            </div>
+
+            {videoSource === "url" ? (
+              /* URL input */
+              <div>
+                <input
+                  type="url"
+                  value={form.videoUrl}
+                  onChange={(e) => handleVideoUrlChange(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                  className="w-full bg-[#0e0e0e] border border-tx-mute rounded-lg px-3.5 py-2.5 text-sm text-tx outline-none focus:border-gold transition-colors"
+                />
+                <p className="text-[11px] text-tx-ghost mt-1.5">
+                  YouTube or Vimeo links — thumbnail auto-detected
+                </p>
+              </div>
+            ) : (
+              /* File upload */
+              <div>
+                {/* Show existing uploaded video */}
+                {form.videoUrl && isDirectVideoUrl(form.videoUrl) && !videoFile && (
+                  <div className="mb-3 border border-green-400/20 rounded-xl p-4 bg-green-400/[0.03]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-green-400"><CheckIcon /></span>
+                      <span className="text-xs text-green-400 font-medium">
+                        Video uploaded
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-tx-dim truncate">
+                      {form.videoUrl.split("/").pop()?.split("?")[0] || "video file"}
+                    </p>
+                  </div>
+                )}
+
+                {/* New file selected */}
+                {videoFile && (
+                  <div className="mb-3 border border-gold/20 rounded-xl p-4 bg-gold/[0.03]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gold"><FilmIcon /></span>
+                        <div>
+                          <p className="text-xs text-tx font-medium truncate max-w-[240px]">
+                            {videoFile.name}
+                          </p>
+                          <p className="text-[11px] text-tx-dim">
+                            {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVideoFile(null)}
+                        className="w-6 h-6 rounded-full bg-black/40 text-white/60 hover:text-white flex items-center justify-center text-xs transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload area */}
+                {!videoFile && (
+                  <label className="block cursor-pointer">
+                    <div className="border border-dashed border-tx-mute rounded-xl p-6 hover:border-tx-ghost transition-colors flex flex-col items-center gap-2">
+                      <span className="text-tx-dim"><UploadIcon /></span>
+                      <p className="text-sm text-tx-dim">Click to upload video</p>
+                      <p className="text-xs text-tx-ghost">
+                        MP4, MOV, WebM · Up to 500MB
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                <p className="text-[11px] text-tx-ghost mt-1.5">
+                  Video will be uploaded to Firebase Storage on save
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Thumbnail Upload */}
@@ -545,10 +740,12 @@ export default function NewProject() {
           <div className="flex gap-3 pt-2 pb-8">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || videoUploading}
               className="px-7 py-3 bg-gold text-bg text-[11px] font-semibold tracking-[1.5px] uppercase rounded-lg hover:bg-gold/85 transition-colors disabled:opacity-50"
             >
-              {saving
+              {videoUploading
+                ? "Uploading video…"
+                : saving
                 ? "Saving…"
                 : editId
                 ? "Save Changes"
@@ -604,7 +801,9 @@ export default function NewProject() {
                 className="relative rounded-xl overflow-hidden border border-tx-mute"
                 style={{
                   aspectRatio: "16/10",
-                  background: previewBg || "linear-gradient(135deg, #1b1f35, #0f1428, #1e2444)",
+                  background:
+                    previewBg ||
+                    "linear-gradient(135deg, #1b1f35, #0f1428, #1e2444)",
                 }}
               >
                 {/* Overlay */}
@@ -621,16 +820,13 @@ export default function NewProject() {
                   <p
                     className="font-serif text-xl font-medium text-white leading-tight mb-1"
                     style={{
-                      fontFamily:
-                        "'Cormorant Garamond', Georgia, serif",
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
                     }}
                   >
                     {form.title || "Project Title"}
                   </p>
                   {form.subtitle && (
-                    <p className="text-xs text-white/60">
-                      {form.subtitle}
-                    </p>
+                    <p className="text-xs text-white/60">{form.subtitle}</p>
                   )}
                 </div>
 
@@ -661,7 +857,9 @@ export default function NewProject() {
                   className="w-[200px] shrink-0 rounded-lg border border-tx-mute flex items-center justify-center"
                   style={{
                     aspectRatio: "16/10",
-                    background: previewBg || "linear-gradient(135deg, #1b1f35, #0f1428, #1e2444)",
+                    background:
+                      previewBg ||
+                      "linear-gradient(135deg, #1b1f35, #0f1428, #1e2444)",
                   }}
                 >
                   {form.hasVideo && (
@@ -682,8 +880,7 @@ export default function NewProject() {
                   <p
                     className="font-serif text-[22px] font-medium mb-1 leading-tight"
                     style={{
-                      fontFamily:
-                        "'Cormorant Garamond', Georgia, serif",
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
                     }}
                   >
                     {form.title || "Project Title"}

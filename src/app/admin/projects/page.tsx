@@ -32,7 +32,6 @@ const categoryOptions = [
   { value: "music-video", label: "Music Video" },
   { value: "film", label: "Short Film" },
   { value: "documentary", label: "Documentary" },
-  { value: "photography", label: "Photography" },
 ];
 
 function catColor(c: string) {
@@ -40,18 +39,14 @@ function catColor(c: string) {
     ? "text-gold bg-gold/8"
     : c === "film"
     ? "text-green-400 bg-green-400/8"
-    : c === "documentary"
-    ? "text-indigo-400 bg-indigo-400/8"
-    : "text-pink-400 bg-pink-400/8";
+    : "text-indigo-400 bg-indigo-400/8";
 }
 function catDot(c: string) {
   return c === "music-video"
     ? "bg-gold"
     : c === "film"
     ? "bg-green-400"
-    : c === "documentary"
-    ? "bg-indigo-400"
-    : "bg-pink-400";
+    : "bg-indigo-400";
 }
 
 /* ───────── icons ───────── */
@@ -100,9 +95,11 @@ export default function ProjectsList() {
   async function fetchProjects() {
     const q = query(collection(db, "projects"), orderBy("order", "asc"));
     const snap = await getDocs(q);
-    setProjects(
-      snap.docs.map((d) => ({ id: d.id, ...d.data() } as Project))
-    );
+    // Exclude photography — managed separately in /admin/photography
+    const all = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Project))
+      .filter((p) => p.category !== "photography");
+    setProjects(all);
     setLoading(false);
   }
 
@@ -220,7 +217,6 @@ export default function ProjectsList() {
 
               {/* Title + Subtitle + Thumbnail */}
               <div className="flex items-center gap-3 min-w-0">
-                {/* Mini gradient thumbnail */}
                 <div
                   className="w-10 h-7 rounded-[5px] shrink-0 border border-tx-mute flex items-center justify-center"
                   style={{
@@ -231,7 +227,6 @@ export default function ProjectsList() {
                       : "linear-gradient(135deg, #1b1f35, #0f1428)",
                   }}
                 >
-                  {/* Tailwind gradient classes won't work in inline style, use a fallback */}
                   {project.hasVideo && (
                     <svg
                       width="10"

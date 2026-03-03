@@ -1,20 +1,50 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { PhotoItem } from "@/components/PhotoItem";
 
-const photos = [
-  { id: "r1", label: "Residente · Live", gradient: "bg-gradient-to-br from-[#162030] via-[#0a1220] to-[#1c2a3c]", tall: true },
-  { id: "r2", label: "Residente · Live", gradient: "bg-gradient-to-br from-[#20161a] via-[#130e10] to-[#2a1c22]" },
-  { id: "r3", label: "Residente · Live", gradient: "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]" },
-  { id: "j1", label: "Jacquees · Concert", gradient: "bg-gradient-to-br from-[#2a1525] via-[#140a18] to-[#351a2b]" },
-  { id: "j2", label: "Jacquees · Concert", gradient: "bg-gradient-to-br from-[#1a1a2e] via-[#0d1118] to-[#1a1520]" },
-  { id: "j3", label: "Jacquees · Concert", gradient: "bg-gradient-to-br from-[#2b1a0e] via-[#1a100a] to-[#3a2112]", wide: true },
-  { id: "b1", label: "Behind the Scenes", gradient: "bg-gradient-to-br from-[#0f2018] via-[#081510] to-[#162a1f]" },
-  { id: "d1", label: "Dominican Republic", gradient: "bg-gradient-to-br from-[#1c1410] via-[#0d0a08] to-[#241a12]" },
-  { id: "d2", label: "Dominican Republic", gradient: "bg-gradient-to-br from-[#2b1a0e] via-[#1a100a] to-[#3a2112]", tall: true },
-  { id: "s1", label: "Street Photography", gradient: "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]" },
-  { id: "p1", label: "Puerto Rico", gradient: "bg-gradient-to-br from-[#20161a] via-[#130e10] to-[#2a1c22]" },
-];
+interface Photo {
+  id: string;
+  label: string;
+  album: string;
+  layout: string;
+  imageUrl: string;
+  order: number;
+}
 
 export default function PhotographyPage() {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPhotos() {
+      try {
+        const q = query(collection(db, "photos"), orderBy("order", "asc"));
+        const snap = await getDocs(q);
+        setPhotos(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() } as Photo))
+        );
+      } catch (err) {
+        console.error("Failed to fetch photos:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPhotos();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="pt-24 pb-20 px-6 md:px-11 flex items-center justify-center min-h-[60vh]">
+        <p className="text-tx-dim text-sm tracking-widest uppercase">
+          Loading…
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-24 pb-20">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-[5px] px-6 md:px-11">
@@ -22,9 +52,9 @@ export default function PhotographyPage() {
           <PhotoItem
             key={photo.id}
             label={photo.label}
-            gradient={photo.gradient}
-            tall={photo.tall}
-            wide={photo.wide}
+            imageUrl={photo.imageUrl}
+            tall={photo.layout === "tall"}
+            wide={photo.layout === "wide"}
           />
         ))}
       </div>
