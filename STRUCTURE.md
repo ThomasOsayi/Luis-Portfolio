@@ -19,13 +19,15 @@ Luis-Portfolio/
 │   │   ├── admin/
 │   │   │   ├── clients/
 │   │   │   │   └── page.tsx      # Clients CRUD + live preview
+│   │   │   ├── photography/
+│   │   │   │   └── page.tsx      # Photos CRUD, albums, drag reorder, preview
 │   │   │   ├── projects/
 │   │   │   │   ├── new/
 │   │   │   │   │   └── page.tsx  # Add/Edit project, split view, YouTube thumb
 │   │   │   │   └── page.tsx      # Projects table, filters, category pills
 │   │   │   ├── settings/
 │   │   │   │   └── page.tsx      # Site settings, section nav, live /about preview
-│   │   │   ├── layout.tsx        # Auth guard, admin nav, sign out
+│   │   │   ├── layout.tsx        # Auth guard, admin nav (Dashboard, Projects, Photography, Clients, Settings)
 │   │   │   └── page.tsx          # Dashboard: stats, recent projects, quick actions
 │   │   ├── login/
 │   │   │   └── page.tsx          # Email/password login → /admin
@@ -36,13 +38,13 @@ Luis-Portfolio/
 │   │   ├── films/
 │   │   │   └── page.tsx          # Short films (static projects filter)
 │   │   ├── photography/
-│   │   │   └── page.tsx          # Photography grid (local photos)
+│   │   │   └── page.tsx          # Photography grid — Firestore photos + Lightbox
 │   │   ├── work/
-│   │   │   └── page.tsx          # Work grid — fetches from Firestore
+│   │   │   └── page.tsx          # Work grid — Firestore, WorkSkeleton, video modal
 │   │   ├── favicon.ico
 │   │   ├── globals.css           # Theme, film grain, admin animations
-│   │   ├── layout.tsx            # Fonts, FilmGrain, ContactModal, LayoutShell
-│   │   └── page.tsx              # Enter gate (scroll/touch to enter)
+│   │   ├── layout.tsx            # Fonts, FilmGrain, ContactModal, VideoModal, LayoutShell
+│   │   └── page.tsx              # Enter gate — hero/social from Firestore, scroll/touch to enter
 │   │
 │   ├── components/
 │   │   ├── ContactModal.tsx      # Contact form modal
@@ -50,17 +52,20 @@ Luis-Portfolio/
 │   │   ├── FilmGrain.tsx         # Film-grain overlay
 │   │   ├── Footer.tsx            # Site footer
 │   │   ├── LayoutShell.tsx       # Navbar + main + Footer (hidden on /admin)
+│   │   ├── Lightbox.tsx          # Full-screen image viewer (keyboard, touch, prev/next)
 │   │   ├── Navbar.tsx            # Fixed top nav
 │   │   ├── PageTransition.tsx    # (stub)
-│   │   ├── PhotoItem.tsx         # Photo grid item (tall/wide, label on hover)
-│   │   ├── ProjectCard.tsx       # Work card (imageUrl or gradient, play icon)
-│   │   └── ScrollReveal.tsx      # Scroll fade-up
+│   │   ├── PhotoItem.tsx         # Photo grid item (imageUrl or gradient, tall/wide, label)
+│   │   ├── ProjectCard.tsx       # Work card — imageUrl/videoUrl, opens VideoModal on click
+│   │   ├── ScrollReveal.tsx     # Scroll fade-up
+│   │   ├── Skeleton.tsx          # Loading skeletons (Work, Films, Photo, Clients, About)
+│   │   └── VideoModal.tsx       # Video modal (open-video event, YouTube/Vimeo/direct embed)
 │   │
 │   ├── data/
 │   │   └── projects.ts          # Static projects + clients (films, clients pages)
 │   │
 │   └── lib/
-│       └── firebase.ts           # Firebase app, Auth, Firestore, Storage, Analytics
+│       └── firebase.ts          # Firebase app, Auth, Firestore, Storage, Analytics
 │
 ├── .gitignore
 ├── eslint.config.mjs
@@ -96,61 +101,69 @@ Luis-Portfolio/
 
 - **Tailwind v4 theme**: `@theme` with `--color-bg`, `--color-tx`, `--color-gold`, `--font-sans`, `--font-serif`, `--ease-smooth`.
 - **Base**: dark background, smooth scroll, gold scrollbar, film-grain keyframes.
-- **Admin animations**: `@keyframes admin-fade-in`, `admin-fade-in-up`; utility `.animate-fade-in-up` used on admin pages.
+- **Admin animations**: `@keyframes admin-fade-in`, `admin-fade-in-up`; utility `.animate-fade-in-up`.
 - **tailwind.config.ts**: content paths, extended colors/fonts/easing.
 
 ### Root Layout (`layout.tsx`)
 
-- Google Fonts (Chivo, Cormorant Garamond). Renders: `FilmGrain`, `ContactModal`, `LayoutShell` (wraps children). No Navbar/Footer in layout directly — they live inside LayoutShell.
+- Google Fonts (Chivo, Cormorant Garamond). Renders: `FilmGrain`, `ContactModal`, `VideoModal`, `LayoutShell`. VideoModal opens via `open-video` custom event (used by ProjectCard).
 
 ### LayoutShell (`LayoutShell.tsx`)
 
-- Wraps children in `Navbar` → `main` → `Footer` when path is **not** `/admin`; on `/admin` only `main` (no nav/footer). Keeps admin UI uncluttered.
+- Renders `Navbar` → `main` → `Footer` when path is **not** `/admin`; on `/admin` only `main`.
 
 ### Enter Gate / Homepage (`page.tsx`)
 
-- Full-screen hero, “Luis Rosa” branding. **Enter** and **Contact** buttons; Enter → `/work`. **Scroll to enter**: wheel listener (two scroll steps) and touch-swipe down trigger navigation to `/work`. Contact opens modal via `open-contact` event.
+- **Hero image and Instagram** loaded from Firestore `siteSettings/main` (heroImage, instagram); fallback to local `/images/hero.jpeg` and default Instagram URL.
+- Enter / Contact buttons; scroll-to-enter (wheel) and touch-swipe to enter; Contact opens modal via `open-contact`.
 
 ### Public Pages
 
-- **Work** (`work/page.tsx`): Fetches projects from Firestore `projects` collection (`orderBy("order")`). Loading state. Renders grid of `ProjectCard` with `imageUrl`, `gradient`, `categoryLabel`, `subtitle`, `hasVideo`/`isVideo`, `featured`/`isFeatured`.
-- **About** (`about/page.tsx`): Two-column layout — image side, text side (heading, two paragraphs, details grid: Based In, Education, Focus, Heritage). Static content; not yet driven by `siteSettings`.
-- **Clients** (`clients/page.tsx`): “Selected Clients & Collaborators” grid; client names from static `data/projects.ts` `clients` array; serif/sans styling and staggered Framer Motion.
-- **Short Films** (`films/page.tsx`): Filters static `projects` by film/documentary; each rendered with `FilmEntry` (thumbnail, title, role, description, alternating reverse layout).
-- **Photography** (`photography/page.tsx`): Local `photos` array; grid of `PhotoItem` (gradient, optional tall/wide span, label on hover).
+- **Work** (`work/page.tsx`): Fetches from Firestore `projects` (`orderBy("order")`), excludes `category === "photography"`. Loading → `WorkSkeleton`. Grid of `ProjectCard` with `imageUrl`, `videoUrl`, `gradient`, etc. Click opens **VideoModal** when `videoUrl` is set.
+- **About** (`about/page.tsx`): Two-column layout; static content (not yet from siteSettings).
+- **Clients** (`clients/page.tsx`): Static `clients` from `data/projects.ts`; serif/sans styling, staggered motion.
+- **Short Films** (`films/page.tsx`): Static `projects` filtered by film/documentary; `FilmEntry` per item.
+- **Photography** (`photography/page.tsx`): Fetches from Firestore `photos` collection (`orderBy("order")`). Loading → `PhotoSkeleton`. Grid with `layout` (tall/wide) for row/col span. Click opens **Lightbox** (current index, navigate, close).
 
 ### Components
 
-- **Navbar**: Fixed nav, links (Work, Short Films, Photography, Clients, About), Contact, active route, Instagram; hidden on `/` and `/login`. Rendered inside LayoutShell (hidden on admin).
-- **Footer**: Copyright, “Designed by HNO Consulting”; hidden on `/`; inside LayoutShell.
-- **ContactModal**: Full-screen overlay, form (name, email, project type, message), `open-contact` event, close on Escape; submit not wired to backend.
-- **ProjectCard**: Accepts `imageUrl` (real image) or `gradient` fallback; hover overlay (category, title, subtitle); optional play icon when `isVideo`. Used by Work page with Firestore data.
-- **FilmEntry**: `Project` prop; gradient thumbnail + play button; title, role, description; optional `reverse` for alternating layout.
-- **PhotoItem**: Gradient block, optional `row-span-2` / `col-span-2`, label on hover.
-- **ScrollReveal**, **FilmGrain**: Unchanged (scroll fade-up, film-grain overlay).
+- **Navbar**: Fixed nav, links, Contact, active route, Instagram; hidden on `/` and `/login`. Inside LayoutShell.
+- **Footer**: Copyright, credit; hidden on `/`. Inside LayoutShell.
+- **ContactModal**: Full-screen overlay, form; `open-contact` event; close on Escape; submit not wired.
+- **VideoModal** (`VideoModal.tsx`): Listens for `open-video` custom event (detail = video URL). Full-screen overlay; YouTube/Vimeo embed or direct video; close on Escape or backdrop click; body scroll lock.
+- **ProjectCard**: `imageUrl` or `gradient`; `videoUrl`; onClick dispatches `open-video` when `videoUrl` present; play icon when `isVideo`.
+- **Lightbox** (`Lightbox.tsx`): Full-screen image viewer. Props: `images` (imageUrl + label), `currentIndex`, `onClose`, `onNavigate`. Keyboard (Escape, ArrowLeft/Right), touch swipe, prev/next buttons; caption and index (e.g. 1 / N). Body scroll lock.
+- **PhotoItem**: `imageUrl` or `gradient`; optional `tall`/`wide` for grid span; label on hover.
+- **Skeleton** (`Skeleton.tsx`): Base `Skeleton` (shimmer block). **WorkSkeleton**, **FilmsSkeleton**, **PhotoSkeleton**, **ClientsSkeleton**, **AboutSkeleton** — page-specific loading placeholders.
+- **FilmEntry**, **ScrollReveal**, **FilmGrain**: As before.
 
 ### Firebase (`lib/firebase.ts`)
 
-- Single app init via `NEXT_PUBLIC_FIREBASE_*` env vars. Exports: `db` (Firestore), `storage` (Storage), `auth` (Auth), `app`, `analytics` (client-only when supported).
+- Single app init via `NEXT_PUBLIC_FIREBASE_*`. Exports: `db`, `storage`, `auth`, `app`, `analytics`.
 
 ### Authentication & Admin
 
-- **Login** (`login/page.tsx`): Email/password, `signInWithEmailAndPassword`, `onAuthStateChanged` → redirect to `/admin`. Loading state.
-- **Admin layout** (`admin/layout.tsx`): Auth guard; unauthenticated → inline login form; authenticated → admin nav (Dashboard, Projects, Clients, Settings), “View Site”, Sign Out. Wraps children in padded container.
+- **Login** (`login/page.tsx`): Email/password, redirect to `/admin`, loading state.
+- **Admin layout** (`admin/layout.tsx`): Auth guard. Nav: **Dashboard**, **Projects**, **Photography**, **Clients**, **Settings** (with icons). “View Site”, Sign Out.
 
-- **Admin dashboard** (`admin/page.tsx`): Firestore stats (total projects, music videos, films, clients, featured). Recent projects (last 4, orderBy order). Quick actions: New Film Project, New Music Video, New Photo Set, New Documentary (links to `/admin/projects/new?cat=...`). Portfolio sections: Short Films, Music Videos, Photography with category counts and links. Icons (Film, Play, Camera, Image, Arrow).
+- **Admin dashboard** (`admin/page.tsx`): Firestore stats; recent projects; quick actions by category; portfolio sections with links.
 
-- **Projects list** (`admin/projects/page.tsx`): Firestore `projects`, `orderBy("order")`. Filter tabs: All + by category (Music Video, Short Film, Documentary, Photography) with counts. Table: #, Project (mini thumbnail + title + subtitle), Category (colored pill), Status (Featured badge), Order, Actions (Edit link, Delete with confirm). Category colors (gold, green, indigo, pink). Row hover state. Icons (Grip, Edit, Trash, Plus).
+- **Projects list** (`admin/projects/page.tsx`): Firestore `projects`; filter tabs; table with thumbnail, category pills, featured, order; Edit / Delete.
 
-- **Add/Edit project** (`admin/projects/new/page.tsx`): Split view: left form, right live preview. Form: title, category, subtitle, description, role, video URL, thumbnail (file upload or **YouTube thumbnail auto-fetch** from video URL), gradient, featured/hasVideo checkboxes, order. Back button to list. Edit mode loads doc by `?edit=id`; create uses `addDoc`. Image upload to Storage `projects/`. Preview shows card/detail. Uses `featured` and `hasVideo` in Firestore.
+- **Add/Edit project** (`admin/projects/new/page.tsx`): Split view; YouTube thumbnail auto-fetch; form fields; Storage upload; create/update.
 
-- **Clients admin** (`admin/clients/page.tsx`): Firestore `clients`, `orderBy("order")`. Add form (name + style serif/sans). List with order, name, style, Remove (with confirm). **Show/Hide Preview**: when on, live preview of public clients page (including name being typed). Icons (Plus, Trash, Grip, Eye).
+- **Admin Photography** (`admin/photography/page.tsx`): Firestore `photos` collection. **Album filter** tabs (All + dynamic albums with counts). **Add photo** modal: label, album, layout (normal/tall/wide), file upload to Storage `photos/`. Table: drag handle, thumb, label/album, layout (cycle button), order, delete. **Drag-and-drop reorder** (when filter = All); batch update `order` via `writeBatch`. **Cycle layout** per photo (normal → tall → wide). Show/Hide **live preview** of public photography grid. Icons: Grip, Trash, Plus, Eye, Upload, Image, X; layout icons and colors.
 
-- **Site settings** (`admin/settings/page.tsx`): Single doc `siteSettings/main`. **Section nav**: Hero & Branding, About Page, Details Grid, Social Links (smooth scroll to section). **Show/hide live preview** of `/about` (heading, paragraphs, details grid, social links). Form: hero image upload (Storage `site/`), mission statement, about heading, about paragraphs 1 & 2, basedIn, education, focus, heritage, instagram/vimeo/youtube. Icons (Eye, Upload, Check, Instagram, Vimeo, Youtube, MapPin, Book, Target, Globe). Split layout (form ~55%, preview ~45% when preview on). Save with `setDoc`; “Settings saved” feedback.
+- **Clients admin** (`admin/clients/page.tsx`): Firestore `clients`; add form; list; Show/Hide Preview.
+
+- **Site settings** (`admin/settings/page.tsx`): `siteSettings/main`; section nav; hero image, about copy, details, social; live /about preview; save feedback.
 
 ### Data
 
-- **`data/projects.ts`**: Static `Project[]` and `clients` array. Used by **Films** and **Clients** public pages. **Work** page reads from Firestore; admin reads/writes Firestore.
+- **Work**: Firestore `projects` (photography excluded).
+- **Photography**: Firestore `photos` (label, album, layout, imageUrl, order).
+- **Enter gate**: `siteSettings/main` (heroImage, instagram).
+- **Films**, **Clients**: static `data/projects.ts`.
 
 ---
 
@@ -159,11 +172,9 @@ Luis-Portfolio/
 | Item                     | Status                                                                 |
 | ------------------------ | ---------------------------------------------------------------------- |
 | `PageTransition`         | Stub — passthrough wrapper, no animation                               |
-| Contact form submit       | Form UI only; no backend or `onSubmit` handler                          |
-| Navbar Contact button     | Present; may need to dispatch `open-contact` (verify wiring)            |
-| Public Films from Firestore | Films page uses static `projects.ts` filter; not Firestore             |
-| Public Clients from Firestore | Clients page uses static `clients` from `projects.ts`                  |
-| About from site settings  | About page is static; not driven by `siteSettings/main`                |
-| Enter gate hero from settings | Hero image/background not loaded from `siteSettings` (if desired)      |
-| Mobile hamburger menu     | Nav links `hidden md:flex`; no mobile menu                            |
-| Project detail / video modal | ProjectCard/FilmEntry do not open detail page or video modal on click |
+| Contact form submit      | Form UI only; no backend or `onSubmit` handler                        |
+| Navbar Contact button    | Present; verify dispatches `open-contact`                              |
+| Public Films from Firestore | Films page uses static `projects.ts` filter                           |
+| Public Clients from Firestore | Clients page uses static `clients` from `projects.ts`                |
+| About from site settings | About page is static; not driven by `siteSettings/main`                 |
+| Mobile hamburger menu    | Nav links `hidden md:flex`; no mobile menu                              |

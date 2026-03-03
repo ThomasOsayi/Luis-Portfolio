@@ -19,10 +19,6 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [instagram, setInstagram] = useState("https://instagram.com/rodreelz");
 
-  // Hide navbar on the enter gate (homepage)
-  if (pathname === "/") return null;
-
-  // Load Instagram from settings
   useEffect(() => {
     async function loadSocial() {
       try {
@@ -35,16 +31,16 @@ export function Navbar() {
     loadSocial();
   }, []);
 
-  // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Lock body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
+
+  if (pathname === "/") return null;
 
   return (
     <>
