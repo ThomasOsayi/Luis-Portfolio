@@ -1,12 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 export default function EnterGate() {
   const [exiting, setExiting] = useState(false);
+  const [heroImage, setHeroImage] = useState("/images/hero.jpeg");
+  const [instagram, setInstagram] = useState("https://instagram.com/rodreelz");
   const router = useRouter();
+
+  // Load hero image and social links from Firestore
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const snap = await getDoc(doc(db, "siteSettings", "main"));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.heroImage) setHeroImage(data.heroImage);
+          if (data.instagram) setInstagram(data.instagram);
+        }
+      } catch (err) {
+        console.error("Failed to load site settings:", err);
+      }
+    }
+    loadSettings();
+  }, []);
 
   function enter() {
     if (exiting) return;
@@ -52,10 +73,10 @@ export default function EnterGate() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[10000] flex flex-col justify-between overflow-hidden"
         >
-          {/* Background image */}
+          {/* Background image — from Firestore or local fallback */}
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/images/hero.jpeg')" }}
+            style={{ backgroundImage: `url('${heroImage}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-bg/25 via-bg/8 to-bg/55" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(10,10,10,0.35)_100%)]" />
@@ -74,15 +95,30 @@ export default function EnterGate() {
 
             <div className="flex gap-3.5 items-center">
               <a
-                href="https://instagram.com/rodreelz"
+                href={instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-[38px] h-[38px] border border-tx/20 flex items-center justify-center hover:border-tx hover:bg-tx/[0.06] transition-all"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="2" width="20" height="20" rx="5" />
                   <circle cx="12" cy="12" r="5" />
-                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                  <circle
+                    cx="17.5"
+                    cy="6.5"
+                    r="1"
+                    fill="currentColor"
+                    stroke="none"
+                  />
                 </svg>
               </a>
               <button
@@ -94,7 +130,10 @@ export default function EnterGate() {
               <button
                 onClick={() => {
                   enter();
-                  setTimeout(() => window.dispatchEvent(new Event("open-contact")), 800);
+                  setTimeout(
+                    () => window.dispatchEvent(new Event("open-contact")),
+                    800
+                  );
                 }}
                 className="text-[10px] font-bold tracking-[3px] uppercase text-tx bg-transparent border border-tx/25 px-6 py-3 hover:bg-tx hover:text-bg hover:border-tx transition-all duration-300"
               >
@@ -106,7 +145,8 @@ export default function EnterGate() {
           {/* Bottom: Name */}
           <div className="relative z-10 px-6 md:px-11 pb-11 flex justify-between items-end">
             <h1 className="font-serif font-semibold leading-[0.86] tracking-tight text-tx text-[clamp(52px,10vw,150px)]">
-              Luis<br />
+              Luis
+              <br />
               <em className="italic font-light text-gold">Rosa</em>
             </h1>
             <p className="text-[9px] tracking-[3px] uppercase text-tx-ghost [writing-mode:vertical-rl] animate-pulse hidden md:block">

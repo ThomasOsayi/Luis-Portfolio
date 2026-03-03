@@ -13,6 +13,7 @@ interface Project {
   subtitle?: string;
   gradient?: string;
   imageUrl?: string;
+  videoUrl?: string;
   hasVideo?: boolean;
   isVideo?: boolean;
   featured?: boolean;
@@ -51,8 +52,6 @@ export default function WorkPage() {
     );
   }
 
-  console.log("PROJECTS:", projects.map((p) => ({ title: p.title, imageUrl: p.imageUrl })));
-
   return (
     <div className="pt-24 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-[5px] px-11">
@@ -60,10 +59,11 @@ export default function WorkPage() {
           <ProjectCard
             key={project.id}
             title={project.title}
-            category={project.categoryLabel ?? ""}
+            category={project.categoryLabel}
             subtitle={project.subtitle}
-            gradient={project.gradient ?? ""}
-            imageUrl={project.imageUrl}        
+            gradient={project.gradient}
+            imageUrl={project.imageUrl}
+            videoUrl={project.videoUrl}
             isVideo={project.hasVideo ?? project.isVideo}
             isFull={project.featured ?? project.isFeatured}
           />

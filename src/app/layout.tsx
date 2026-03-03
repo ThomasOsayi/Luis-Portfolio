@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Chivo, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { ContactModal } from "@/components/ContactModal";
+import { VideoModal } from "@/components/VideoModal";
 import { FilmGrain } from "@/components/FilmGrain";
 import { LayoutShell } from "@/components/LayoutShell";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className="font-sans">
         <FilmGrain />
         <ContactModal />
+        <VideoModal />
         <LayoutShell>{children}</LayoutShell>
       </body>
     </html>

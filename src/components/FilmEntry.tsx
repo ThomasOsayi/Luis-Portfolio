@@ -1,10 +1,27 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { Project } from "@/data/projects";
+
+interface Film {
+  id: string;
+  title: string;
+  category: string;
+  categoryLabel: string;
+  subtitle?: string;
+  description?: string;
+  role?: string;
+  gradient?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  hasVideo?: boolean;
+  isVideo?: boolean;
+  featured?: boolean;
+  isFeatured?: boolean;
+  order: number;
+}
 
 interface FilmEntryProps {
-  film: Project;
+  film: Film;
   reverse?: boolean;
 }
 
@@ -24,10 +41,24 @@ export function FilmEntry({ film, reverse = false }: FilmEntryProps) {
         className={`relative overflow-hidden cursor-pointer group aspect-video bg-bg-elevated ${
           reverse ? "md:[direction:ltr]" : ""
         }`}
+        onClick={() => {
+          if (film.videoUrl) {
+            window.dispatchEvent(
+              new CustomEvent("open-video", { detail: film.videoUrl })
+            );
+          }
+        }}
       >
-        <div
-          className={`w-full h-full ${film.gradient} transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.04] group-hover:brightness-[0.6] brightness-[0.8]`}
-        />
+        {film.imageUrl ? (
+          <div
+            className="w-full h-full bg-cover bg-center transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.04] group-hover:brightness-[0.6] brightness-[0.8]"
+            style={{ backgroundImage: `url(${film.imageUrl})` }}
+          />
+        ) : (
+          <div
+            className={`w-full h-full ${film.gradient || "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]"} transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.04] group-hover:brightness-[0.6] brightness-[0.8]`}
+          />
+        )}
         {/* Play button */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-[1.5px] border-white/20 flex items-center justify-center opacity-0 scale-[0.85] group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 ease-smooth backdrop-blur-sm bg-white/[0.03]">
           <svg

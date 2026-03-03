@@ -172,6 +172,14 @@ export default function AdminLayout({
               Sign In
             </button>
           </form>
+          <p className="mt-6 text-center">
+            <Link
+              href="/"
+              className="text-[10px] tracking-[2px] uppercase text-tx-ghost hover:text-tx transition-colors"
+            >
+              ← Return to site
+            </Link>
+          </p>
         </div>
       </div>
     );

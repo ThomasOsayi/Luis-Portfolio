@@ -8,6 +8,7 @@ interface ProjectCardProps {
   subtitle?: string;
   gradient?: string;
   imageUrl?: string;
+  videoUrl?: string;
   isVideo?: boolean;
   isFull?: boolean;
 }
@@ -18,16 +19,25 @@ export function ProjectCard({
   subtitle,
   gradient,
   imageUrl,
+  videoUrl,
   isVideo = false,
   isFull = false,
 }: ProjectCardProps) {
-  console.log("CARD RENDER:", title, "imageUrl:", imageUrl);
+  function handleClick() {
+    if (videoUrl) {
+      window.dispatchEvent(
+        new CustomEvent("open-video", { detail: videoUrl })
+      );
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      onClick={handleClick}
       className={`relative overflow-hidden cursor-pointer group ${
         isFull ? "col-span-2 h-[70vh]" : "h-[50vh]"
       }`}
@@ -40,7 +50,10 @@ export function ProjectCard({
         />
       ) : (
         <div
-          className={`w-full h-full ${gradient || "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]"} transition-transform duration-[1200ms] ease-smooth group-hover:scale-105 brightness-[0.8] group-hover:brightness-50`}
+          className={`w-full h-full ${
+            gradient ||
+            "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]"
+          } transition-transform duration-[1200ms] ease-smooth group-hover:scale-105 brightness-[0.8] group-hover:brightness-50`}
         />
       )}
 
