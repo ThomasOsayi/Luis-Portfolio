@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Chivo, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
 import { ContactModal } from "@/components/ContactModal";
 import { FilmGrain } from "@/components/FilmGrain";
-import { Footer } from "@/components/Footer";
+import { LayoutShell } from "@/components/LayoutShell";
 
 const chivo = Chivo({
   subsets: ["latin"],
@@ -34,10 +33,8 @@ export default function RootLayout({
     <html lang="en" className={`${chivo.variable} ${cormorant.variable}`}>
       <body className="font-sans">
         <FilmGrain />
-        <Navbar />
         <ContactModal />
-        <main>{children}</main>
-        <Footer />
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

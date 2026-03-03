@@ -61,3 +61,49 @@ body {
   60% { transform: translate(-2%, 6%); }
   80% { transform: translate(3%, -3%); }
 }
+
+/* ══════════════════════════════════════
+   ADMIN PANEL UTILITIES
+   ══════════════════════════════════════ */
+
+/* Sidebar background */
+.admin-sidebar {
+  background: #0d0d0d;
+}
+
+/* Fade-in animation for sidebar label */
+@keyframes admin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: admin-fade-in 0.2s ease forwards;
+}
+
+/* Fade-in-up for dashboard sections */
+@keyframes admin-fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: admin-fade-in-up 0.45s ease forwards;
+}
+
+/* Card hover lift */
+.admin-card {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease,
+              background-color 0.3s ease;
+}
+.admin-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Hide site navbar & footer inside /admin */
+body:has(.admin-sidebar) nav:not(.admin-sidebar nav),
+body:has(.admin-sidebar) footer:not(.admin-sidebar ~ div footer) {
+  /* The root layout Navbar and Footer will still render.
+     If the :has selector works in your browser, this hides them.
+     Otherwise, you can conditionally render them in the root layout
+     by checking if the pathname starts with /admin. */
+}

@@ -6,7 +6,8 @@ interface ProjectCardProps {
   title: string;
   category: string;
   subtitle?: string;
-  gradient: string;
+  gradient?: string;
+  imageUrl?: string;
   isVideo?: boolean;
   isFull?: boolean;
 }
@@ -16,9 +17,11 @@ export function ProjectCard({
   category,
   subtitle,
   gradient,
+  imageUrl,
   isVideo = false,
   isFull = false,
 }: ProjectCardProps) {
+  console.log("CARD RENDER:", title, "imageUrl:", imageUrl);
   return (
     <motion.div
       initial={{ opacity: 0, y: 28 }}
@@ -29,10 +32,17 @@ export function ProjectCard({
         isFull ? "col-span-2 h-[70vh]" : "h-[50vh]"
       }`}
     >
-      {/* Image placeholder — replace with next/image when real assets exist */}
-      <div
-        className={`w-full h-full ${gradient} transition-transform duration-[1200ms] ease-smooth group-hover:scale-105 brightness-[0.8] group-hover:brightness-50`}
-      />
+      {/* Background: real image if available, gradient fallback */}
+      {imageUrl ? (
+        <div
+          className="w-full h-full bg-cover bg-center transition-transform duration-[1200ms] ease-smooth group-hover:scale-105 brightness-[0.8] group-hover:brightness-50"
+          style={{ backgroundImage: `url(${imageUrl})` }}
+        />
+      ) : (
+        <div
+          className={`w-full h-full ${gradient || "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]"} transition-transform duration-[1200ms] ease-smooth group-hover:scale-105 brightness-[0.8] group-hover:brightness-50`}
+        />
+      )}
 
       {/* Info overlay */}
       <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-9 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-[450ms] ease-smooth">
