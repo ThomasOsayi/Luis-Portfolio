@@ -8,6 +8,7 @@ import {
   doc,
   orderBy,
   query,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
@@ -91,11 +92,12 @@ export default function ProjectsList() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   async function fetchProjects() {
     const q = query(collection(db, "projects"), orderBy("order", "asc"));
     const snap = await getDocs(q);
-    // Exclude photography — managed separately in /admin/photography
     const all = snap.docs
       .map((d) => ({ id: d.id, ...d.data() } as Project))
       .filter((p) => p.category !== "photography");
@@ -113,6 +115,27 @@ export default function ProjectsList() {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
     await deleteDoc(doc(db, "projects", id));
     setProjects((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function handleReorder(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const reordered = [...projects];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    const updated = reordered.map((p, i) => ({ ...p, order: i }));
+    setProjects(updated);
+
+    try {
+      const batch = writeBatch(db);
+      updated.forEach((p) => {
+        batch.update(doc(db, "projects", p.id), { order: p.order });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error("Failed to reorder:", err);
+      fetchProjects();
+    }
   }
 
   // Filter + counts
@@ -197,34 +220,58 @@ export default function ProjectsList() {
 
           {/* Rows */}
           {filtered.map((project, i) => (
-            <Link
+            <div
               key={project.id}
-              href={`/admin/projects/new?edit=${project.id}`}
+              draggable={filter === "all"}
+              onDragStart={() => setDragIndex(i)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOverIndex(i);
+              }}
+              onDragEnd={() => {
+                if (
+                  filter === "all" &&
+                  dragIndex !== null &&
+                  overIndex !== null
+                )
+                  handleReorder(dragIndex, overIndex);
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+              onMouseEnter={() => setHoveredRow(project.id)}
+              onMouseLeave={() => setHoveredRow(null)}
               className={`grid grid-cols-[36px_1fr_140px_100px_70px_90px] px-5 py-3.5 items-center transition-colors group ${
                 i < filtered.length - 1 ? "border-b border-tx-mute" : ""
               } ${
+                overIndex === i && dragIndex !== null
+                  ? "border-t-2 border-t-gold"
+                  : ""
+              } ${dragIndex === i ? "opacity-40" : ""} ${
                 hoveredRow === project.id
                   ? "bg-bg-card"
                   : "bg-transparent hover:bg-bg-card/50"
               }`}
-              onMouseEnter={() => setHoveredRow(project.id)}
-              onMouseLeave={() => setHoveredRow(null)}
             >
               {/* Grip */}
-              <span className="text-tx-mute">
+              <span className="text-tx-mute cursor-grab active:cursor-grabbing">
                 <GripIcon />
               </span>
 
               {/* Title + Subtitle + Thumbnail */}
-              <div className="flex items-center gap-3 min-w-0">
+              <Link
+                href={`/admin/projects/new?edit=${project.id}`}
+                className="flex items-center gap-3 min-w-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div
                   className="w-10 h-7 rounded-[5px] shrink-0 border border-tx-mute flex items-center justify-center"
                   style={{
-                    background: project.gradient || project.imageUrl
-                      ? project.gradient
-                        ? undefined
-                        : `url(${project.imageUrl}) center/cover`
-                      : "linear-gradient(135deg, #1b1f35, #0f1428)",
+                    background:
+                      project.gradient || project.imageUrl
+                        ? project.gradient
+                          ? undefined
+                          : `url(${project.imageUrl}) center/cover`
+                        : "linear-gradient(135deg, #1b1f35, #0f1428)",
                   }}
                 >
                   {project.hasVideo && (
@@ -249,7 +296,7 @@ export default function ProjectsList() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
 
               {/* Category pill */}
               <div>
@@ -283,12 +330,13 @@ export default function ProjectsList() {
 
               {/* Actions */}
               <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                <span
+                <Link
+                  href={`/admin/projects/new?edit=${project.id}`}
                   className="w-[30px] h-[30px] rounded-md border border-tx-mute bg-bg-card flex items-center justify-center text-tx-dim hover:border-gold hover:text-gold transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <EditIcon />
-                </span>
+                </Link>
                 <button
                   className="w-[30px] h-[30px] rounded-md border border-tx-mute bg-bg-card flex items-center justify-center text-tx-dim hover:border-red-400 hover:text-red-400 transition-colors"
                   onClick={(e) =>
@@ -298,7 +346,7 @@ export default function ProjectsList() {
                   <TrashIcon />
                 </button>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

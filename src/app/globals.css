@@ -107,3 +107,14 @@ body:has(.admin-sidebar) footer:not(.admin-sidebar ~ div footer) {
      Otherwise, you can conditionally render them in the root layout
      by checking if the pathname starts with /admin. */
 }
+
+/* ══════════════════════════════════════
+   SKELETON SHIMMER
+   ══════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+}

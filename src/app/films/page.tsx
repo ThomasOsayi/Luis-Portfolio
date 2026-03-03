@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { FilmEntry } from "@/components/FilmEntry";
+import { FilmsSkeleton } from "@/components/Skeleton";
 
 interface Project {
   id: string;
@@ -49,15 +50,7 @@ export default function FilmsPage() {
     fetchFilms();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="pt-24 pb-20 px-6 md:px-11 flex items-center justify-center min-h-[60vh]">
-        <p className="text-tx-dim text-sm tracking-widest uppercase">
-          Loading…
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <FilmsSkeleton />;
 
   return (
     <div className="pt-24 pb-20 px-6 md:px-11">

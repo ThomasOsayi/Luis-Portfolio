@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PhotoItem } from "@/components/PhotoItem";
+import { PhotoSkeleton } from "@/components/Skeleton";
+import { Lightbox } from "@/components/Lightbox";
 
 interface Photo {
   id: string;
@@ -17,6 +19,7 @@ interface Photo {
 export default function PhotographyPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchPhotos() {
@@ -35,29 +38,39 @@ export default function PhotographyPage() {
     fetchPhotos();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="pt-24 pb-20 px-6 md:px-11 flex items-center justify-center min-h-[60vh]">
-        <p className="text-tx-dim text-sm tracking-widest uppercase">
-          Loading…
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <PhotoSkeleton />;
 
   return (
     <div className="pt-24 pb-20">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-[5px] px-6 md:px-11">
-        {photos.map((photo) => (
-          <PhotoItem
+        {photos.map((photo, i) => (
+          <div
             key={photo.id}
-            label={photo.label}
-            imageUrl={photo.imageUrl}
-            tall={photo.layout === "tall"}
-            wide={photo.layout === "wide"}
-          />
+            onClick={() => setLightboxIndex(i)}
+            className="cursor-zoom-in"
+            style={{
+              gridRow: photo.layout === "tall" ? "span 2" : "span 1",
+              gridColumn: photo.layout === "wide" ? "span 2" : "span 1",
+            }}
+          >
+            <PhotoItem
+              label={photo.label}
+              imageUrl={photo.imageUrl}
+              tall={false}
+              wide={false}
+            />
+          </div>
         ))}
       </div>
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={photos.map((p) => ({ imageUrl: p.imageUrl, label: p.label }))}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={(i) => setLightboxIndex(i)}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -122,6 +123,8 @@ export default function PhotographyAdmin() {
   const [showPreview, setShowPreview] = useState(true);
   const [filterAlbum, setFilterAlbum] = useState("all");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   // Add modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -238,6 +241,28 @@ export default function PhotographyAdmin() {
     }
   }
 
+  // Drag-and-drop reorder
+  async function handleReorder(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const reordered = [...photos];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    const updated = reordered.map((p, i) => ({ ...p, order: i }));
+    setPhotos(updated);
+
+    try {
+      const batch = writeBatch(db);
+      updated.forEach((p) => {
+        batch.update(doc(db, "photos", p.id), { order: p.order });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error("Failed to reorder:", err);
+      fetchPhotos();
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -323,14 +348,36 @@ export default function PhotographyAdmin() {
             {filtered.map((photo, i) => (
               <div
                 key={photo.id}
+                draggable={filterAlbum === "all"}
+                onDragStart={() => setDragIndex(i)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setOverIndex(i);
+                }}
+                onDragEnd={() => {
+                  if (
+                    filterAlbum === "all" &&
+                    dragIndex !== null &&
+                    overIndex !== null
+                  )
+                    handleReorder(dragIndex, overIndex);
+                  setDragIndex(null);
+                  setOverIndex(null);
+                }}
                 onMouseEnter={() => setHoveredRow(photo.id)}
                 onMouseLeave={() => setHoveredRow(null)}
                 className={`grid grid-cols-[28px_52px_1fr_100px_60px_70px] px-4 py-2.5 items-center transition-colors ${
                   i < filtered.length - 1 ? "border-b border-tx-mute" : ""
-                } ${hoveredRow === photo.id ? "bg-bg-card" : ""}`}
+                } ${
+                  overIndex === i && dragIndex !== null
+                    ? "border-t-2 border-t-gold"
+                    : ""
+                } ${dragIndex === i ? "opacity-40" : ""} ${
+                  hoveredRow === photo.id ? "bg-bg-card" : ""
+                }`}
               >
                 {/* Grip */}
-                <span className="text-tx-mute">
+                <span className="text-tx-mute cursor-grab active:cursor-grabbing">
                   <GripIcon />
                 </span>
 

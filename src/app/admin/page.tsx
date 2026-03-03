@@ -53,14 +53,14 @@ function ArrowRightIcon() {
 const quickActions = [
   { label: "New Film Project", icon: FilmIcon, category: "Short Film", href: "/admin/projects/new?cat=film" },
   { label: "New Music Video", icon: PlayIcon, category: "Music Video", href: "/admin/projects/new?cat=music-video" },
-  { label: "New Photo Set", icon: CameraIcon, category: "Photography", href: "/admin/projects/new?cat=photography" },
+  { label: "Add Photos", icon: CameraIcon, category: "Photography", href: "/admin/photography" },
   { label: "New Documentary", icon: ImageIcon, category: "Documentary", href: "/admin/projects/new?cat=documentary" },
 ];
 
 const portfolioSections = [
-  { title: "Short Films", category: "film", description: "Narrative & experimental films", accent: "from-[#1a1510]" },
-  { title: "Music Videos", category: "music-video", description: "Artist collaborations & visuals", accent: "from-[#10151a]" },
-  { title: "Photography", category: "photography", description: "Portraits, sets & behind the scenes", accent: "from-[#151017]" },
+  { title: "Short Films", category: "film", description: "Narrative & experimental films", accent: "from-[#1a1510]", href: "/admin/projects" },
+  { title: "Music Videos", category: "music-video", description: "Artist collaborations & visuals", accent: "from-[#10151a]", href: "/admin/projects" },
+  { title: "Photography", category: "photography", description: "Portraits, sets & behind the scenes", accent: "from-[#151017]", href: "/admin/photography" },
 ];
 
 export default function AdminDashboard() {
@@ -68,6 +68,7 @@ export default function AdminDashboard() {
     total: 0,
     musicVideos: 0,
     films: 0,
+    photos: 0,
     clients: 0,
     featured: 0,
   });
@@ -77,8 +78,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Total projects
-        const projSnap = await getCountFromServer(collection(db, "projects"));
+        // Total projects (excluding photography — those are in photos collection)
+        const projSnap = await getCountFromServer(
+          query(collection(db, "projects"), where("category", "!=", "photography"))
+        );
         const total = projSnap.data().count;
 
         // Music videos
@@ -93,6 +96,10 @@ export default function AdminDashboard() {
         );
         const films = filmSnap.data().count;
 
+        // Photos (separate collection)
+        const photoSnap = await getCountFromServer(collection(db, "photos"));
+        const photos = photoSnap.data().count;
+
         // Featured
         const featSnap = await getCountFromServer(
           query(collection(db, "projects"), where("featured", "==", true))
@@ -103,18 +110,20 @@ export default function AdminDashboard() {
         const clientSnap = await getCountFromServer(collection(db, "clients"));
         const clients = clientSnap.data().count;
 
-        setStats({ total, musicVideos, films, clients, featured });
+        setStats({ total, musicVideos, films, photos, clients, featured });
 
-        // Recent projects (last 4)
+        // Recent projects (last 4, excluding photography)
         const recentQ = query(
           collection(db, "projects"),
           orderBy("order", "asc"),
-          limit(4)
+          limit(6)
         );
         const recentDocs = await getDocs(recentQ);
-        setRecentProjects(
-          recentDocs.docs.map((d) => ({ id: d.id, ...d.data() }))
-        );
+        const filtered = recentDocs.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((p: any) => p.category !== "photography")
+          .slice(0, 4);
+        setRecentProjects(filtered);
       } catch (err) {
         console.error("Failed to fetch stats:", err);
       } finally {
@@ -127,7 +136,8 @@ export default function AdminDashboard() {
   const categoryCount = (cat: string) => {
     if (cat === "film") return stats.films;
     if (cat === "music-video") return stats.musicVideos;
-    return stats.total - stats.musicVideos - stats.films;
+    if (cat === "photography") return stats.photos;
+    return 0;
   };
 
   return (
@@ -145,13 +155,14 @@ export default function AdminDashboard() {
 
       {/* Stats */}
       <div
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10"
         style={{ animationDelay: "0.05s" }}
       >
         {[
-          { label: "Total Projects", value: stats.total, sub: `${stats.featured} featured` },
+          { label: "Projects", value: stats.total, sub: `${stats.featured} featured` },
           { label: "Music Videos", value: stats.musicVideos, sub: "Video projects" },
           { label: "Films", value: stats.films, sub: "Films & docs" },
+          { label: "Photos", value: stats.photos, sub: "Gallery images" },
           { label: "Clients", value: stats.clients, sub: "Collaborators" },
         ].map((s, i) => (
           <div
@@ -284,7 +295,7 @@ export default function AdminDashboard() {
           {portfolioSections.map((section, i) => (
             <Link
               key={i}
-              href="/admin/projects"
+              href={section.href}
               className={`admin-card group relative overflow-hidden bg-gradient-to-br ${section.accent} to-bg-card border border-tx-mute rounded-xl p-7 transition-all duration-300 hover:border-tx-ghost`}
             >
               <div className="absolute top-0 right-0 w-28 h-28 bg-[radial-gradient(circle_at_top_right,rgba(201,169,110,0.04),transparent)]" />
@@ -296,7 +307,8 @@ export default function AdminDashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gold font-medium">
-                  {loaded ? categoryCount(section.category) : "–"} projects
+                  {loaded ? categoryCount(section.category) : "–"}{" "}
+                  {section.category === "photography" ? "photos" : "projects"}
                 </span>
                 <span className="text-tx-ghost group-hover:text-gold group-hover:translate-x-1 transition-all duration-300">
                   <ArrowRightIcon />

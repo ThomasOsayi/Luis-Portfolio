@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
+import { AboutSkeleton } from "@/components/Skeleton";
 
 interface SiteSettings {
   aboutHeading: string;
@@ -30,6 +31,7 @@ const defaults: SiteSettings = {
 
 export default function AboutPage() {
   const [settings, setSettings] = useState<SiteSettings>(defaults);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -49,10 +51,14 @@ export default function AboutPage() {
         }
       } catch (err) {
         console.error("Failed to load site settings:", err);
+      } finally {
+        setLoading(false);
       }
     }
     load();
   }, []);
+
+  if (loading) return <AboutSkeleton />;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen pt-20">

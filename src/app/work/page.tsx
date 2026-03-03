@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ProjectCard } from "@/components/ProjectCard";
+import { WorkSkeleton } from "@/components/Skeleton";
 
 interface Project {
   id: string;
@@ -30,9 +31,11 @@ export default function WorkPage() {
       try {
         const q = query(collection(db, "projects"), orderBy("order", "asc"));
         const snap = await getDocs(q);
-        setProjects(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as Project))
-        );
+        // Exclude photography — those are on /photography
+        const all = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Project))
+          .filter((p) => p.category !== "photography");
+        setProjects(all);
       } catch (err) {
         console.error("Failed to fetch projects:", err);
       } finally {
@@ -42,19 +45,11 @@ export default function WorkPage() {
     fetchProjects();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="pt-24 pb-20 flex items-center justify-center min-h-[60vh]">
-        <p className="text-tx-dim text-sm tracking-widest uppercase">
-          Loading…
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <WorkSkeleton />;
 
   return (
     <div className="pt-24 pb-20">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-[5px] px-11">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[5px] px-6 md:px-11">
         {projects.map((project) => (
           <ProjectCard
             key={project.id}

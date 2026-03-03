@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
+import { ClientsSkeleton } from "@/components/Skeleton";
 
 interface Client {
   id: string;
@@ -33,15 +34,7 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="pt-24 pb-20 px-6 md:px-11 min-h-screen flex items-center justify-center">
-        <p className="text-tx-dim text-sm tracking-widest uppercase">
-          Loading…
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <ClientsSkeleton />;
 
   return (
     <div className="pt-24 pb-20 px-6 md:px-11 min-h-screen flex flex-col justify-center">
