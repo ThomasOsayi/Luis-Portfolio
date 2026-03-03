@@ -6,33 +6,25 @@ interface PhotoItemProps {
   label: string;
   gradient?: string;
   imageUrl?: string;
-  tall?: boolean;
-  wide?: boolean;
 }
 
-export function PhotoItem({ label, gradient, imageUrl, tall, wide }: PhotoItemProps) {
+export function PhotoItem({ label, gradient, imageUrl }: PhotoItemProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className={`relative overflow-hidden cursor-pointer group ${
-        tall ? "row-span-2" : ""
-      } ${wide ? "col-span-2" : ""}`}
+      className="relative overflow-hidden cursor-pointer group w-full h-full"
     >
       {imageUrl ? (
         <div
-          className={`w-full h-full min-h-[240px] ${
-            tall ? "min-h-[500px]" : ""
-          } bg-cover bg-center transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.06] group-hover:brightness-[0.65]`}
+          className="w-full h-full bg-cover bg-center transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.06] group-hover:brightness-[0.65]"
           style={{ backgroundImage: `url(${imageUrl})` }}
         />
       ) : (
         <div
-          className={`w-full h-full min-h-[240px] ${
-            tall ? "min-h-[500px]" : ""
-          } ${
+          className={`w-full h-full ${
             gradient ||
             "bg-gradient-to-br from-[#1b1f35] via-[#0f1428] to-[#1e2444]"
           } transition-all duration-[1000ms] ease-smooth group-hover:scale-[1.06] group-hover:brightness-[0.65]`}

@@ -42,12 +42,15 @@ export default function PhotographyPage() {
 
   return (
     <div className="pt-24 pb-20">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-[5px] px-6 md:px-11">
+      <div
+        className="grid grid-cols-2 md:grid-cols-3 gap-[5px] px-6 md:px-11"
+        style={{ gridAutoRows: "250px" }}
+      >
         {photos.map((photo, i) => (
           <div
             key={photo.id}
             onClick={() => setLightboxIndex(i)}
-            className="cursor-zoom-in"
+            className="cursor-zoom-in h-full"
             style={{
               gridRow: photo.layout === "tall" ? "span 2" : "span 1",
               gridColumn: photo.layout === "wide" ? "span 2" : "span 1",
@@ -56,8 +59,6 @@ export default function PhotographyPage() {
             <PhotoItem
               label={photo.label}
               imageUrl={photo.imageUrl}
-              tall={false}
-              wide={false}
             />
           </div>
         ))}
